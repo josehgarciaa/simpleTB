@@ -1,3 +1,6 @@
-git+https://github.com/mchalela/GriSPy.git
+grispy
 numpy
 scipy
+matplotlib
+ase
+periodictable

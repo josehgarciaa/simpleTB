@@ -1,4 +1,4 @@
-from simpletb.system import System
+from simpletb.system_old import System
 
 import numpy as np
 def hopping( x, y ):
