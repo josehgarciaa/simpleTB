@@ -8,6 +8,7 @@ import periodictable
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 # Some plotting functions for visualization
 def plot_heatmap(matrix):
     plt.figure(figsize=(8, 6))
@@ -19,11 +20,9 @@ def plot_heatmap(matrix):
     plt.show()
 
 
-
 def main():
-
     """
-    Exampe of how to use simpleTB
+    Example of how to use simpleTB
     Returns:
 
     """
@@ -34,11 +33,6 @@ def main():
     print("lattice_vectors:", lattice_vectors)
     print("atom_types:", atom_types)
     print("coordinates:", coordinates)
-
-    lattice_vectors=np.array([[26.88  ,      0.  ,        0.        ],
-                              [ 0.   ,       7.    ,      0.        ],
-                        [ 0.      ,    0.   ,      24.59512147]])
-
 
     # Construct the system elements:
     syte_list = {}
@@ -51,16 +45,31 @@ def main():
                                 "dummy": "73",
                             })
 
+    def hopping_calculator(self, site_a, site_b):
+        t10 = -2.414
+        t20 = -0.168
 
-    def hopping_calculator(site_a, site_b):
-        return 7
+        r = np.linalg.norm(site_a.xyz - site_b.xyz)
+        if r <= (1 + np.sqrt(3)) * 1.24 / 2:
+            t = t10 * np.exp(1.847 * (r - 1.24))
+        elif r <= (2 + np.sqrt(3)) * 1.24:
+            t = t20 * np.exp(-0.168 * (r - 1.24 * np.sqrt(3)))
+        else:
+            t = 0
 
+        return t
 
-    def onsite_calculator(site_a):
-        return 9
+    def onsite_calculator(self, site_a):
 
+        onsite = 9
+        simbol = site_a.label.split("_")[0]
+        if simbol == "C":
+            onsite = 2
+        else:
+            onsite = 3
+        return onsite
 
-    material = System(syte_list, lattice_vectors, upper_radii=1 )
+    material = System(syte_list, lattice_vectors, upper_radii=0.9, lower_radii=-1)
 
     material.hopping_calculator = hopping_calculator
     material.onsite_calculator = onsite_calculator
@@ -73,5 +82,5 @@ def main():
     plt.show()
 
 
-
-main()
+if __name__ == "__main__":
+    main()

@@ -8,8 +8,6 @@ from ase.io import read
 import numpy as np
 
 
-
-
 def parse_xyz_file(filename):
     """
 
@@ -22,9 +20,28 @@ def parse_xyz_file(filename):
     atoms = read(filename, format='xyz')
     atom_types = atoms.get_chemical_symbols()
     coordinates = atoms.get_positions()
-    lattice_vectors= atoms.get_cell()
-
+    lattice_vectors = parse_lattice_vectors(filename)
 
     return lattice_vectors, atom_types, coordinates
 
 
+def parse_lattice_vectors(filename):
+    """
+     required for ase xyz files.
+    Args:
+        filename (str): path to the xyz file
+
+    Returns:
+
+    """
+    with open(filename, 'r') as f:
+        # Read the second line
+        second_line = f.readlines()[1].strip()
+
+        # Extract lattice vectors from the second line
+        lattice_str = second_line.split('Lattice="')[1]
+        lattice_str=lattice_str.split('" ')[0]
+        lattice_values = [float(val) for val in lattice_str.split()]
+        lattice_vectors = np.array(lattice_values).reshape(3, 3)
+
+    return lattice_vectors

@@ -4,7 +4,15 @@ import grispy as gsp
 
 class System():
 
-    def __init__(self, site_list, lattice_vectors, upper_radii=0.42):
+    def __init__(self, site_list, lattice_vectors, upper_radii=0.42, lower_radii=0):
+        """
+
+        Args:
+            site_list ():
+            lattice_vectors ():
+            upper_radii ():
+            lower_radii ():
+        """
 
         self.site_list = site_list
         self.lattice_vectors = lattice_vectors
@@ -18,9 +26,10 @@ class System():
 
         # must be set to 1 because this will work on the coordinates
         self.grid_periodic = {0: (0, 1), 1: (0, 1), }  # 1: (0, 0)
+        # self.grid_periodic = {0:  tuple(self.lattice_vectors[0]), 1: tuple(self.lattice_vectors[0]), }  # 1: (0, 0)
 
-        self.upper_radii=upper_radii
-        self.lower_radii=0
+        self.upper_radii = upper_radii
+        self.lower_radii = lower_radii
 
     def get_onsite(self):
         """
@@ -67,37 +76,42 @@ class System():
         site_xyz = []
 
         for site_key in self.site_list.keys():
-            coord_xyz = xyz_to_local(self.site_list[site_key].xyz, self.lattice_vectors)
-
+            # coord_xyz = xyz_to_local(self.site_list[site_key].xyz, self.lattice_vectors)
+            coord_xyz = self.site_list[site_key].xyz
             site_xyz.append(coord_xyz)
         return np.array(site_xyz)
 
-    def lattice_metric(self, site_0, centres, dim):
-        """
-
-        Computes the distance between site_0 and etch center
-        Args:
-            site_0 (Tensor): tensor with x,y,z in local coordinates
-            centres (List[Tensors]):  list of the center coordinates in local coordinates
-            dim (int):  dim of the site_0 integer representing the nr of elements in the vector site_0
-                        not used rith now but required
-
-        Returns: distances list of the distances to etch tensor
-
-        """
-
-        # concert site from lattice to xyz coordinates:
-        s_xyz = local_to_xyz(site_0, self.lattice_vectors)
-
-        distances = np.empty(len(centres))
-        for idx, center in enumerate(centres):
-            # mouve center back in real coordinates:
-            c_xyz = local_to_xyz(center, self.lattice_vectors)
-
-            # store the distance
-            distances[idx] = np.linalg.norm(c_xyz - s_xyz)
-
-        return distances
+    # def lattice_metric(self, site_0, centres, dim):
+    #     """
+    #
+    #     Computes the distance between site_0 and etch center
+    #     Args:
+    #         site_0 (Tensor): tensor with x,y,z in local coordinates
+    #         centres (List[Tensors]):  list of the center coordinates in local coordinates
+    #         dim (int):  dim of the site_0 integer representing the nr of elements in the vector site_0
+    #                     not used rith now but required
+    #
+    #     Returns: distances list of the distances to etch tensor
+    #
+    #     """
+    #
+    #     # concert site from lattice to xyz coordinates:
+    #     # s_xyz = local_to_xyz(site_0, self.lattice_vectors)
+    #     s_xyz = site_0
+    #
+    #     distances = np.empty(len(centres))
+    #
+    #     # TODO:
+    #     # Do it with matrix multiplication so it will be faster
+    #     for idx, center in enumerate(centres):
+    #         # mouve center back in real coordinates:
+    #         # c_xyz = local_to_xyz(center, self.lattice_vectors)
+    #         c_xyz = center
+    #         # store the distance
+    #         distances[idx] = np.linalg.norm(c_xyz - s_xyz)
+    #
+    #     print("d:", distances)
+    #     return distances
 
     def compute_neighbours(self):
         """
@@ -110,14 +124,21 @@ class System():
 
         grid = gsp.GriSPy(site_coord,
                           periodic=self.grid_periodic,
-                          metric=self.lattice_metric, )
+                          # metric=self.lattice_metric,
+                          )
 
         upper_radii = self.upper_radii
         lower_radii = self.lower_radii
-        shell_dist, shell_ind = grid.shell_neighbors(centres=site_coord,
-                                                     distance_lower_bound=lower_radii,
-                                                     distance_upper_bound=upper_radii, )
+        # Go from buble to shell
+        #bubble
+        # shell_dist, shell_ind = grid.bubble_neighbors(centres=site_coord,
+        #                                               # distance_lower_bound=lower_radii,
+        #                                               distance_upper_bound=upper_radii, )
+        shell_dist, shell_ind = grid.nearest_neighbors(centres=site_coord[:2],
+                                                     n=1 )
 
+        print("sd:", shell_dist)
+        print("shell_ind:", shell_ind)
         neighbours = {}
 
         for sit_key in self.site_list.keys():
@@ -133,12 +154,14 @@ class System():
 
         """
         hoppings = []
-        for site_a_id in self.site_list:
-            for site_b_id in self.get_neighbours():
-                if site_a_id!=site_b_id:
+        neighbours = self.get_neighbours()
+        for site_a_id in self.site_list.keys():
+            for site_b_id in neighbours[site_a_id]:
+
+                if site_a_id != site_b_id:
                     sa = self.site_list[site_a_id]
                     sb = self.site_list[site_b_id]
-                    hopping_value = self.hopping_calculator(sa, sb)
+                    hopping_value = self.hopping_calculator(self, sa, sb)
                     hoppings.append([site_a_id, site_b_id, hopping_value])
 
         self.hopping = hoppings
@@ -152,7 +175,7 @@ class System():
         """
         onsite = []
         for site_a_id in self.site_list:
-            onsite.append([site_a_id, self.onsite_calculator(self.site_list[site_a_id])])
+            onsite.append([site_a_id, self.onsite_calculator(self, self.site_list[site_a_id])])
 
         self.onsite = onsite
 
@@ -171,11 +194,11 @@ class System():
         for i, os in enumerate(onsite):
             mat[os[0]][os[0]] = os[1]
 
+        print("hopping", hopping)
         for i, hop in enumerate(hopping):
-            mat[hop[0]][hop[2]] = hop[2]
+            mat[hop[0]][hop[1]] = hop[2]
 
         return mat
-
 
 
 def _hopping_calculator(self, site_a, site_b):
