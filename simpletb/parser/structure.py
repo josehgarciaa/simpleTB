@@ -4,11 +4,10 @@ Read from xyz file
 from ase.cell import Cell
 from ase.io import read
 
-from ase.io import read
 import numpy as np
 
 
-def parse_xyz_file(filename):
+def read_xyz(filename):
     """
 
     Args:
