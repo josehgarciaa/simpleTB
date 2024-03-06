@@ -1,5 +1,4 @@
 import copy
-import numpy as np
 from scipy.spatial import cKDTree
 from .site_list import SiteList
 

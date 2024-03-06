@@ -1,15 +1,10 @@
-
 import numpy as np
-
-from scipy.spatial.distance import cdist
-import numpy as np
-import grispy as gsp
 from .site import Site
 
 
-class System():
+class System:
 
-    def __init__(self, site_list=None, lattice_vectors=None, dimensions=(1 ,1 ,1), **kwargs):
+    def __init__(self, site_list=None, lattice_vectors=None, dimensions=(1, 1, 1)):
         """
 
         Args:
@@ -18,18 +13,14 @@ class System():
         """
         self.neighbours = None
         self.hopping_function = None
-        self.onsite_onsite = None
+        self.onsite_function = None
         self.onsite_list = None
-        self.hopping_list= None
-
+        self.hopping_list = None
+        self.compute_neighbours = None
 
         self.site_list = site_list
         self.lattice_vectors = lattice_vectors
-        self.dimensions= dimensions
-
-
-
-
+        self.dimensions = dimensions
 
     def get_site_coordinates(self):
         """
@@ -38,11 +29,19 @@ class System():
 
         """
 
-        return self.__cartesian_to_fractional( self.site_list.coordinates())
-
+        return self.__cartesian_to_fractional(self.site_list.coordinates())
 
     def get_sites(self):
         return self.site_list.get_sites()
+
+    def set_compute_neighbours(self, get_neighbours):
+        """
+        At one moment get neighbours will be incorporated in system until then we use his function to set it.
+        Args:
+            get_neighbours: A function that returns the neighbouring indices  [[uid,[nei_uid...]]...]
+
+        """
+        self.compute_neighbours = get_neighbours
 
     def set_onsite_function(self, onsite_function):
         """
@@ -53,7 +52,7 @@ class System():
         # This is a simple check to see if the function can accept a Site instance and return a float.
         # More sophisticated or specific checks might be required depending on the use case.
         try:
-            assert isinstance(onsite_function(Site()), float), "Function does not return a float"
+            assert isinstance(onsite_function(self, Site()), float), "Function does not return a float"
         except AssertionError as e:
             raise TypeError \
                 ("onsite_function must be a callable that accepts a Site instance and returns a float.") from e
@@ -64,15 +63,16 @@ class System():
         """
         A function that takes as the argument an object of two objects Site_i and Site_j and returns a complex number.
         Args:
-            hopping_function (Callable[[Site,Site], complex]): A function that accepts two  Site objects and returns a complex.
+            hopping_function (Callable[[Site,Site], complex]): A function that accepts
+            two  Site objects and returns a complex.
         """
         # This is a simple check to see if the function can accept a Site instance and return a float.
         # More sophisticated or specific checks might be required depending on the use case.
         try:
-            assert isinstance(hopping_function(Site() ,Site()), complex), "Function does not return a float"
+            assert isinstance(hopping_function(self, Site(), Site()), complex), "Function does not return a float"
         except AssertionError as e:
-            raise TypeError \
-                ("onsite_function must be a callable that accepts a Site instance and returns a float.") from e
+            raise TypeError(
+                "hopping_function must be a callable that accepts a Site instance and returns a float.") from e
         self.hopping_function = hopping_function
         return True
 
@@ -83,10 +83,31 @@ class System():
         if self.neighbours is not None:
             return self.neighbours
         else:
-            return self.compute_neighbours()
+            return self.compute_neighbours(self)
 
+    def get_hopping(self):
+        """
 
+        Returns: Returns the hopping and computes them if they are not computed yet.
 
+        """
+
+        if self.hopping_list is not None:
+            return self.hopping_list
+        else:
+            return self.compute_hopping()
+
+    def get_onsite(self):
+        """
+
+        Returns: Returns the onsite and computes them if they are not computed yet.
+
+        """
+
+        if self.onsite_list is not None:
+            return self.onsite_list
+        else:
+            return self.compute_onsite()
 
     def compute_hopping(self):
         """
@@ -97,14 +118,15 @@ class System():
         """
         hoppings = []
         neighbours = self.get_neighbours()
-        for site_a_id in self.site_list.keys():
-            for site_b_id in neighbours[site_a_id]:
-
-                if site_a_id != site_b_id:
-                    sa = self.site_list[site_a_id]
-                    sb = self.site_list[site_b_id]
+        print("neighbours:",neighbours)
+        for ng in neighbours:
+            sa_uid=ng[0]
+            for sb_uid in ng[1]:
+                if sa_uid!=sb_uid:
+                    sa = self.site_list.get_sites([sa_uid])[0]
+                    sb = self.site_list.get_sites([sb_uid])[0]
                     hopping_value = self.hopping_function(self, sa, sb)
-                    hoppings.append([site_a_id, site_b_id, hopping_value])
+                    hoppings.append([sa_uid, sb_uid, hopping_value])
 
         self.hopping_list = hoppings
         return self.hopping_list
@@ -116,8 +138,10 @@ class System():
 
         """
         onsite_list = []
-        for site_a_id in self.site_list:
-            onsite_list.append([site_a_id, self.onsite_function(self, self.site_list[site_a_id])])
+        sites = self.site_list.get_sites()
+        print(sites)
+        for site_ in sites:
+            onsite_list.append([site_.uid, self.onsite_function(self, site_)])
         self.onsite_list = onsite_list
 
         return self.onsite_list
@@ -133,7 +157,7 @@ class System():
         onsite = self.get_onsite()
         hopping = self.get_hopping()
 
-        mat = np.zeros([len(onsite), len(onsite)])
+        mat = np.zeros([len(onsite), len(onsite)],dtype=complex)
         for i, os in enumerate(onsite):
             mat[os[0]][os[0]] = os[1]
 
@@ -142,7 +166,6 @@ class System():
             mat[hop[0]][hop[1]] = hop[2]
 
         return mat
-
 
     def __cartesian_to_fractional(self, cart):
         """
@@ -154,7 +177,7 @@ class System():
 
         """
 
-        return np.linalg.inv(self.lattice_vectors ) @cart
+        return np.linalg.inv(self.lattice_vectors) @ cart
 
     def __fractional_to_cartesian(self, frac):
         """
@@ -166,5 +189,4 @@ class System():
 
         """
 
-        return self.lattice_vectors @frac
-
+        return self.lattice_vectors @ frac
