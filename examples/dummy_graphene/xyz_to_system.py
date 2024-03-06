@@ -10,13 +10,13 @@ import matplotlib.pyplot as plt
 
 
 # Some plotting functions for visualization
-def plot_heatmap(matrix):
+def plot_heatmap(matrix,title):
     plt.figure(figsize=(8, 6))
     plt.imshow(matrix, cmap='viridis', interpolation='nearest')
     plt.colorbar()
-    plt.title('Heatmap of Matrix')
-    plt.xlabel('X-axis')
-    plt.ylabel('Y-axis')
+    plt.title(title)
+    plt.xlabel('site_x')
+    plt.ylabel('site_y')
     plt.show()
 
 
@@ -41,13 +41,13 @@ def main():
 
     def hopping_calculator(system, site_a, site_b):
         """
-
+        Computes the hoping between two sites.
         Args:
-            system:
-            site_a:
-            site_b:
+            system: system from witch siteA and siteB are extracted.
+            site_a: site A
+            site_b: Site B
 
-        Returns:
+        Returns: hopping value
 
         """
         t10 = -2.414
@@ -65,10 +65,10 @@ def main():
 
     def onsite_calculator(system, site_a):
         """
-
+        Computes the onsite
         Args:
-            system:
-            site_a:
+            system: system from witch siteA is extracted
+            site_a: site A
 
         Returns:
 
@@ -96,16 +96,34 @@ def main():
         Returns: list of neighbours []
 
         """
-        return get_neighbor_indexes(system, cutoff=5, pbc=(True, True, False))
+        return get_neighbor_indexes(system, cutoff=3, pbc=(True, True, False))
 
     material.set_compute_neighbours(get_neighbours)
 
     hoping_onsite_matrix = material.get_hopping_onsite_matrix()
-    print("neighbours:", material.get_neighbours())
+    neighbours=material.get_neighbours()
+    print("neighbours:", neighbours)
     print("hopping_onsite:\n", hoping_onsite_matrix)
-    hoping_onsite_matrix_real=hoping_onsite_matrix.real
-    plot_heatmap(hoping_onsite_matrix_real)
+    plot_heatmap(hoping_onsite_matrix.real, "Hopping and onsite (real)")
+    plot_heatmap(hoping_onsite_matrix.imag, "Hopping and onsite (imag)")
     plt.show()
+
+    # A last check letś look a bit to the neighbour of few atoms:
+    coordinates = site_list.coordinates()
+    print(coordinates)
+    x = coordinates[0]
+    z = coordinates[2]
+    plt.scatter(x, z)
+    # Pick a site:
+    site = 100
+    neighbours_st = neighbours[site]
+    print(f"{neighbours_st[0]}=={site}")
+    plt.scatter(x[site], z[site], marker="*", c="r")
+    plt.scatter([x[i] for i in neighbours_st[1]],
+                [z[i] for i in neighbours_st[1]], marker=".", c="r")
+    plt.show()
+
+
 
 
 if __name__ == "__main__":
