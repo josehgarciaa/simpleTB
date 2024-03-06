@@ -27,7 +27,7 @@ def main():
 
     """
     print("Read xyz file")
-    xyz_file = "examples/dummy_graphene/dummy_graphene.xyz"
+    xyz_file = "dummy_graphene.xyz"
     lattice_vectors, atom_types, coordinates = struct_from_xyz(xyz_file)
 
     print("lattice_vectors:", lattice_vectors)
