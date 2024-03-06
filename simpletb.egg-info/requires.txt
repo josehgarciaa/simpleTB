@@ -1,3 +1,4 @@
+ase
 numpy
 scipy
 GriSPy@ git+https://github.com/mchalela/GriSPy.git

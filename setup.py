@@ -5,6 +5,7 @@ setup(
     version="0.1.0",
     packages=find_packages(),
     install_requires=[
+        'ase',
         'numpy',
         'scipy',
         'GriSPy @ git+https://github.com/mchalela/GriSPy.git',

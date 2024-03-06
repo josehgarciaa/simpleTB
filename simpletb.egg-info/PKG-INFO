@@ -8,3 +8,7 @@ Author-email: josehugo.garcia@icn2.cat
 License: MIT
 Keywords: example computational package
 License-File: LICENSE
+Requires-Dist: ase
+Requires-Dist: numpy
+Requires-Dist: scipy
+Requires-Dist: GriSPy@ git+https://github.com/mchalela/GriSPy.git
