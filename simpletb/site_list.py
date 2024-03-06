@@ -1,5 +1,4 @@
-from simpletb import Site
-
+from .site import Site
 
 
 class SiteList:
@@ -10,17 +9,20 @@ class SiteList:
     def __init__(self):
         """
 
-        Args:
-            site_id (int):
-            label (str):  string of the following structure : "Atom_Orbital_AnotherProp"
-            xyz (Tensor or List): xyz coordinates.
-            prop (dict):  dictionary with the site proprieties.
         """
 
         self.site_list = []
 
-    def add(self, site):
+    def add(self, site: Site):
         """
-        Returns: Add a site to the list
+
+        Args:
+            site: A site object
+
+        Returns:
+            Add a site to the list.
+            Return site_list with the extra element.
         """
         self.site_list.append(site)
+
+        return self.site_list

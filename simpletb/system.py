@@ -1,78 +1,11 @@
-
-
-import numpy as np
-
-from simpletb.models.graph import SpatialGraph  
-from scipy.spatial.distance import cdist
-
-import grispy as gsp
-
-
-from simpletb import SiteList
-
-class System():
-    """ Storage and handle the momentum-space model and structural information of the system  
-
-    Args:
-        dimensions (tuple): A three integer tuple that defines the dimensions of the system in terms of repeating unit cells. 
-        
-    :Keyword Arguments:
-
-        The arguments are presented in order of preference, i.e, w90_inp will be used over model. 
-        
-        w90_inp (str): The filename of a Wannier90 input file. Calling this argument will look for the label_hr.dat and label.xyz files in the same directory
-
-    Attributes:
-        dimensions (tuple): A three integer tuple that defines the dimensions of the system in terms of repeating unit cells.
-
-    """
-    
-    dimensions= None;
-    #lattice   = Lattice();
-    ham_fun   = None;
-    rec_lat   = None; 
-    ham_op    = None;
-    Uop       = None;
-    basis     = "bloch"
-    sitelist  = SiteList()
-
-    def __init__(self, dimensions=(1,1,1), **kwargs):
-
-        self.dimensions= dimensions ;
-        #self.rec_lat   = self.ReciprocalLattice()
-
-        #When the user submit a Wannier90 input, use it to initialice the system
-        if "graph" in kwargs:
-            cell, points = kwargs["graph"]
-            self.syst = SpatialGraph(cell, points)
-
-    def ComputeNeighbors(self, cutoff):
-        self.cutoff = cutoff
-        def lattice_metric(c0, centres, dim):
-            c0 = c0.reshape((-1, dim))
-            d = cdist(c0, centres).reshape((-1,))
-            d = cdist(c0@self.syst.metric, centres).reshape((-1,))
-            return d
-
-        print(self.syst.metric)
-        periodic = {0: (0, float(self.dimensions[0])),
-                    1: (1, float(self.dimensions[1])),
-                    2: (2, float(self.dimensions[2]))}
-
-        point_grid = self.syst.frac_points.T
-        grid = gsp.GriSPy(point_grid, metric=lattice_metric)
-        centres = np.array([[0.,0.,0.]])
-        dist, ind = grid.bubble_neighbors(centres, distance_upper_bound=self.cutoff )
-        print(self.cutoff,dist, ind)
-
-
 import numpy as np
 import grispy as gsp
-from simpletb.site import Site 
+from simpletb.site import Site
+
 
 class System():
 
-    def __init__(self, site_list, lattice_vectors, dimensions=(1,1,1), **kwargs):
+    def __init__(self, site_list, lattice_vectors, dimensions=(1, 1, 1), upper_radii=3,lower_radii=0.000):
         """
 
         Args:
@@ -85,37 +18,47 @@ class System():
         self.neighbours = None
 
         self.hopping_function = _hopping_calculator
-        self.onsite_onsite = _onsite_calculator
+        self.onsite_function = _onsite_calculator
 
         self.onsite_list = None
-        self.hopping_list= None
-
-        self.dimensions= dimensions ;
+        self.hopping_list = None
 
         # Prescribe by the dimensionality f the supercell
-        
-        periodic = {0: (0, float(self.dimensions[0])),
-                    1: (1, float(self.dimensions[1])),
-                    2: (2, float(self.dimensions[2]))}
+        self.dimensions = dimensions
+        self.periodic = (True, True, False)
 
+        self.upper_radii=upper_radii
+        self.lower_radii =lower_radii
 
 
     def set_onsite_function(self, onsite_function):
         """
         A function that take as the argument an object of type Site and return a real number
         Args:
-            Site():
-        Return
-            Real number
-        """        
+            onsite_function():A function that take as the argument an object of type Site and return a real number
+        Return: -
+        """
         try:
-            x = onsite_function( Site() )
+            x = onsite_function(Site())
         except:
             print("Not a valid onsite-function")
-            
+
         self.onsite_function = onsite_function
 
-    def set_hopping_function(self, onsite_function):
+    def set_hopping_function(self, hopping_function):
+        """
+
+        Args:
+            hopping_function: A function that take as the argument two object of type Site and return a real number
+
+        Returns: -
+
+        """
+        try:
+            x = hopping_function(Site(), Site())
+        except:
+            print("Not a valid hopping_function")
+
         self.hopping_function = hopping_function
 
     def get_onsite(self):
@@ -124,8 +67,8 @@ class System():
         Returns: the onsite and computes them if they are not computed yet
 
         """
-        if self.onsite is not None:
-            return self.onsite
+        if self.onsite_list is not None:
+            return self.onsite_list
         else:
             return self.compute_onsite()
 
@@ -136,8 +79,8 @@ class System():
 
         """
 
-        if self.hopping is not None:
-            return self.hopping
+        if self.hopping_list is not None:
+            return self.hopping_list
         else:
             return self.compute_hopping()
 
@@ -168,37 +111,6 @@ class System():
             site_xyz.append(coord_xyz)
         return np.array(site_xyz)
 
-    # def lattice_metric(self, site_0, centres, dim):
-    #     """
-    #
-    #     Computes the distance between site_0 and etch center
-    #     Args:
-    #         site_0 (Tensor): tensor with x,y,z in local coordinates
-    #         centres (List[Tensors]):  list of the center coordinates in local coordinates
-    #         dim (int):  dim of the site_0 integer representing the nr of elements in the vector site_0
-    #                     not used rith now but required
-    #
-    #     Returns: distances list of the distances to etch tensor
-    #
-    #     """
-    #
-    #     # concert site from lattice to xyz coordinates:
-    #     # s_xyz = local_to_xyz(site_0, self.lattice_vectors)
-    #     s_xyz = site_0
-    #
-    #     distances = np.empty(len(centres))
-    #
-    #     # TODO:
-    #     # Do it with matrix multiplication so it will be faster
-    #     for idx, center in enumerate(centres):
-    #         # mouve center back in real coordinates:
-    #         # c_xyz = local_to_xyz(center, self.lattice_vectors)
-    #         c_xyz = center
-    #         # store the distance
-    #         distances[idx] = np.linalg.norm(c_xyz - s_xyz)
-    #
-    #     print("d:", distances)
-    #     return distances
 
     def compute_neighbours(self):
         """
@@ -210,19 +122,18 @@ class System():
         site_coord = self.get_sites_coord_local()
 
         grid = gsp.GriSPy(site_coord,
-                          periodic=self.grid_periodic,
+                          # periodic=self.periodic
                           # metric=self.lattice_metric,
                           )
 
         upper_radii = self.upper_radii
         lower_radii = self.lower_radii
-        # Go from buble to shell
-        #bubble
-        # shell_dist, shell_ind = grid.bubble_neighbors(centres=site_coord,
-        #                                               # distance_lower_bound=lower_radii,
-        #                                               distance_upper_bound=upper_radii, )
-        shell_dist, shell_ind = grid.nearest_neighbors(centres=site_coord[:2],
-                                                     n=1 )
+        # Go from buble to shell bubble
+        print("site_coord:",site_coord)
+        shell_dist, shell_ind = grid.shell_neighbors(centres=site_coord[:1],
+                                                      distance_lower_bound=lower_radii,
+                                                      distance_upper_bound=upper_radii, )
+
 
         print("sd:", shell_dist)
         print("shell_ind:", shell_ind)

@@ -2,7 +2,7 @@
 Example of how to use simpleTB to simple  build your custom hamiltonian.
 """
 
-from simpletb.read_xyz import parse_xyz_file
+from simpletb.parser.structure import read_xyz
 from simpletb import System, Site
 import periodictable
 import numpy as np
@@ -28,7 +28,7 @@ def main():
     """
     print("Read xyz file")
     xyz_file = "examples/dummy_graphene/dummy_graphene.xyz"
-    lattice_vectors, atom_types, coordinates = parse_xyz_file(xyz_file)
+    lattice_vectors, atom_types, coordinates = read_xyz(xyz_file)
 
     print("lattice_vectors:", lattice_vectors)
     print("atom_types:", atom_types)
@@ -69,7 +69,7 @@ def main():
             onsite = 3
         return onsite
 
-    material = System(syte_list, lattice_vectors, upper_radii=0.9, lower_radii=-1)
+    material = System(syte_list, lattice_vectors, upper_radii=10, lower_radii=0.001)
 
     material.hopping_calculator = hopping_calculator
     material.onsite_calculator = onsite_calculator
