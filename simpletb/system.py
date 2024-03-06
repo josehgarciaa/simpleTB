@@ -1,17 +1,15 @@
 
-
 import numpy as np
 
 from scipy.spatial.distance import cdist
 import numpy as np
 import grispy as gsp
 from .site import Site
-from .site_list import SiteList
-from MDAnalysis.lib.distances import distance_array
+
 
 class System():
 
-    def __init__(self, site_list=None, lattice_vectors=None, dimensions=(1,1,1), **kwargs):
+    def __init__(self, site_list=None, lattice_vectors=None, dimensions=(1 ,1 ,1), **kwargs):
         """
 
         Args:
@@ -27,28 +25,24 @@ class System():
 
         self.site_list = site_list
         self.lattice_vectors = lattice_vectors
-        self.dimensions= dimensions ;
+        self.dimensions= dimensions
 
 
-        # Prescribe by the dimensionality f the supercell
-        
-        periodic = {0: (0, float(self.dimensions[0])),
-                    1: (1, float(self.dimensions[1])),
-                    2: (2, float(self.dimensions[2]))}
+
 
 
     def get_site_coordinates(self):
-        "Return site coordinates in fractional coordinates and as column vectors"
+        """
+
+        Returns: site coordinates in fractional coordinates and as column vectors
+
+        """
+
         return self.__cartesian_to_fractional( self.site_list.coordinates())
 
 
     def get_sites(self):
         return self.site_list.get_sites()
-
-
-
-
-
 
     def set_onsite_function(self, onsite_function):
         """
@@ -61,7 +55,8 @@ class System():
         try:
             assert isinstance(onsite_function(Site()), float), "Function does not return a float"
         except AssertionError as e:
-            raise TypeError("onsite_function must be a callable that accepts a Site instance and returns a float.") from e
+            raise TypeError \
+                ("onsite_function must be a callable that accepts a Site instance and returns a float.") from e
         self.onsite_function = onsite_function
         return True
 
@@ -69,14 +64,15 @@ class System():
         """
         A function that takes as the argument an object of two objects Site_i and Site_j and returns a complex number.
         Args:
-            onsite_function (Callable[[Site,Site], complex]): A function that accepts two  Site objects and returns a complex.
+            hopping_function (Callable[[Site,Site], complex]): A function that accepts two  Site objects and returns a complex.
         """
         # This is a simple check to see if the function can accept a Site instance and return a float.
         # More sophisticated or specific checks might be required depending on the use case.
         try:
-            assert isinstance(hopping_function(Site(),Site()), complex), "Function does not return a float"
+            assert isinstance(hopping_function(Site() ,Site()), complex), "Function does not return a float"
         except AssertionError as e:
-            raise TypeError("onsite_function must be a callable that accepts a Site instance and returns a float.") from e
+            raise TypeError \
+                ("onsite_function must be a callable that accepts a Site instance and returns a float.") from e
         self.hopping_function = hopping_function
         return True
 
@@ -92,31 +88,9 @@ class System():
 
 
 
-    def compute_neighbors(self, cutoff, centres=None):
-        self.cutoff = cutoff
-        def lattice_metric(c0, centres, dim):
-            c0 = c0.reshape((-1, dim))
-            d = cdist(c0, centres).reshape((-1,))
-            d = cdist(c0@self.syst.metric, centres).reshape((-1,))
-            return d
-
-        periodic = {0: (0, float(self.dimensions[0])),
-                    1: (1, float(self.dimensions[1])),
-                    2: (2, float(self.dimensions[2]))}
-
-        point_grid = self.syst.frac_points.T
-#        grid = gsp.GriSPy(point_grid, metric=lattice_metric)
-        grid = gsp.GriSPy(point_grid, metric=lattice_metric)
-
-        if centres is None:
-            centres = point_grid
-        else:
-            point_grid = self.__cartesian_to_fractional(centres)
-            
-        dist, ind = grid.bubble_neighbors(centres, distance_upper_bound=self.cutoff )
-
     def compute_hopping(self):
         """
+
         Computes the hopping for the entire system.
         Returns: [[(site1, site2), hopping_value]...]
 
@@ -132,8 +106,8 @@ class System():
                     hopping_value = self.hopping_function(self, sa, sb)
                     hoppings.append([site_a_id, site_b_id, hopping_value])
 
-        self.hoppings_list = hoppings
-        return self.hoppings_list
+        self.hopping_list = hoppings
+        return self.hopping_list
 
     def compute_onsite(self):
         """
@@ -150,10 +124,12 @@ class System():
 
     def get_hopping_onsite_matrix(self):
         """
+
         Puts the hopping and onsite on a matrix.
         Returns: matrix of hopping and onsite
 
         """
+
         onsite = self.get_onsite()
         hopping = self.get_hopping()
 
@@ -169,9 +145,26 @@ class System():
 
 
     def __cartesian_to_fractional(self, cart):
-        "convert a set of cartesian coordinates (provided as column vectors) into fractional coordinates"
-        return np.linalg.inv(self.lattice_vectors)@cart
+        """
+        Convert a set of cartesian coordinates (provided as column vectors) into fractional coordinates
+        Args:
+            cart:  a set of cartesian coordinates (provided as column vectors)
+
+        Returns: fractional coordinates
+
+        """
+
+        return np.linalg.inv(self.lattice_vectors ) @cart
 
     def __fractional_to_cartesian(self, frac):
-        "convert a set of fractional coordinates (provided as column vectors) into cartesian coordinates"
-        return self.lattice_vectors@frac
+        """
+        convert a set of fractional coordinates (provided as column vectors) into cartesian coordinates
+        Args:
+            frac: a set of fractional coordinates (provided as column vectors)
+
+        Returns: cartesian coordinates
+
+        """
+
+        return self.lattice_vectors @frac
+

@@ -2,8 +2,8 @@
 Example of how to use simpleTB to simple  build your custom hamiltonian.
 """
 
-from simpletb.read_xyz import parse_xyz_file
-from simpletb import System, Site
+from simpletb.parser import struct_from_xyz
+from simpletb import System, SiteList
 import periodictable
 import numpy as np
 import matplotlib.pyplot as plt
@@ -28,24 +28,26 @@ def main():
     """
     print("Read xyz file")
     xyz_file = "examples/dummy_graphene/dummy_graphene.xyz"
-    lattice_vectors, atom_types, coordinates = parse_xyz_file(xyz_file)
+    lattice_vectors, atom_types, coordinates = struct_from_xyz(xyz_file)
 
     print("lattice_vectors:", lattice_vectors)
     print("atom_types:", atom_types)
     print("coordinates:", coordinates)
 
-    # Construct the system elements:
-    syte_list = {}
-    for i, xyz in enumerate(coordinates):
-        syte_list[i] = Site(site_id=i,
-                            label=str(atom_types[i]) + "_",
-                            real_xyz=xyz,
-                            prop={
-                                "atom_nr": periodictable.elements.symbol(str(atom_types[i])).number,
-                                "dummy": "73",
-                            })
+    # Put the system into a site list:
+    site_list = SiteList(atom_types, lattice_vectors)
 
-    def hopping_calculator(self, site_a, site_b):
+    def hopping_calculator(system, site_a, site_b):
+        """
+
+        Args:
+            system:
+            site_a:
+            site_b:
+
+        Returns:
+
+        """
         t10 = -2.414
         t20 = -0.168
 
@@ -59,9 +61,17 @@ def main():
 
         return t
 
-    def onsite_calculator(self, site_a):
+    def onsite_calculator(system, site_a):
+        """
 
-        onsite = 9
+        Args:
+            system:
+            site_a:
+
+        Returns:
+
+        """
+
         simbol = site_a.label.split("_")[0]
         if simbol == "C":
             onsite = 2
@@ -69,7 +79,8 @@ def main():
             onsite = 3
         return onsite
 
-    material = System(syte_list, lattice_vectors, upper_radii=0.9, lower_radii=-1)
+    # Build the material:
+    material = System(site_list, lattice_vectors, upper_radii=0.9, lower_radii=-1)
 
     material.hopping_calculator = hopping_calculator
     material.onsite_calculator = onsite_calculator
